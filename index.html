@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#4f46e5">
+<title>メモ</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;background:#f0f2f5;color:#1f2333;min-height:100vh;padding-bottom:70px}
+.header{background:linear-gradient(135deg,#4f46e5,#4338ca);color:#fff;padding:14px 20px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.header-row{display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:17px;font-weight:700}
+.header-sub{font-size:11px;opacity:.8;margin-top:2px}
+.header button.icon{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:10px;width:34px;height:34px;font-size:15px;cursor:pointer}
+
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #e0e0e0;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+.nav-item{flex:1;text-align:center;padding:8px 4px;font-size:10px;color:#888;cursor:pointer;transition:color .2s}
+.nav-item.active{color:#4f46e5;font-weight:700}
+.nav-item svg{display:block;margin:0 auto 2px}
+
+.fab{position:fixed;right:16px;bottom:78px;width:52px;height:52px;border-radius:50%;background:#4f46e5;color:#fff;border:none;font-size:26px;box-shadow:0 4px 12px rgba(79,70,229,.4);cursor:pointer;z-index:90;display:flex;align-items:center;justify-content:center}
+
+.page{display:none;padding:14px;max-width:640px;margin:0 auto}
+.page.active{display:block}
+
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:7px 13px;border-radius:16px;font-size:12px;font-weight:700;background:#fff;color:#64748b;border:1px solid #e2e8f0;cursor:pointer;white-space:nowrap}
+.chip.active{color:#fff;border-color:transparent}
+
+.search-box{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13px;background:#fff;margin-bottom:10px}
+.search-box:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+
+.filter-tag{display:inline-flex;align-items:center;gap:6px;background:#eef2ff;color:#4338ca;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;margin-bottom:10px}
+.filter-tag span{cursor:pointer;font-weight:900}
+
+.note-card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;gap:10px;cursor:pointer;border-left:4px solid #ccc}
+.note-main{flex:1;min-width:0}
+.note-badges{display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap}
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700}
+.note-title{font-size:14px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-body{font-size:12px;color:#64748b;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.note-meta{font-size:10px;color:#94a3b8;margin-top:6px;display:flex;gap:8px;align-items:center}
+.note-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#f1f5f9}
+
+.empty{text-align:center;padding:40px 20px;color:#94a3b8;font-size:13px}
+
+.card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card-title{font-size:13px;font-weight:700;color:#4f46e5;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+
+.folder-card{background:#fff;border-radius:12px;padding:13px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.folder-name{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.folder-count{font-size:11px;color:#94a3b8;margin-top:2px}
+.folder-del{background:none;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;padding:4px 6px}
+.new-folder-row{display:flex;gap:6px;margin-bottom:12px}
+.new-folder-row input{flex:1;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}
+
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;font-weight:600}
+.form-group input[type=text],.form-group textarea,.form-group select{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:#fff;font-family:inherit}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.form-group textarea{resize:vertical;min-height:120px;line-height:1.5}
+
+.cat-select{display:flex;gap:7px;flex-wrap:wrap}
+.cat-btn{flex:1;min-width:70px;padding:10px 6px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;text-align:center;cursor:pointer;font-size:12px;font-weight:700;color:#64748b}
+.cat-btn .icon{font-size:18px;display:block;margin-bottom:2px}
+.cat-btn.active{border-color:currentColor}
+
+.photo-area{border:2px dashed #d1d5db;border-radius:10px;padding:16px;text-align:center;cursor:pointer;color:#94a3b8;font-size:12px;margin-top:2px}
+.photo-area:hover{border-color:#4f46e5;color:#4f46e5}
+.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.photo-item{position:relative;aspect-ratio:1}
+.photo-item img{width:100%;height:100%;object-fit:cover;border-radius:6px;cursor:pointer}
+.photo-item .rm{position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;border:2px solid #fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;width:100%}
+.btn-primary{background:#4f46e5;color:#fff}
+.btn-primary:hover{background:#4338ca}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-danger{background:#fef2f2;color:#dc2626}
+.btn-row{display:flex;gap:8px;margin-top:10px}
+.btn-row .btn{width:auto;flex:1}
+
+.editor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.back-btn{background:none;border:none;color:#4f46e5;font-size:13px;font-weight:700;cursor:pointer;padding:4px 0}
+
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center}
+.modal.active{display:flex}
+.modal img{max-width:95vw;max-height:90vh;border-radius:8px}
+
+.storage-bar{height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;margin-top:8px}
+.storage-fill{height:100%;background:#4f46e5;transition:width .3s}
+.storage-text{font-size:11px;color:#64748b;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div>
+      <h1>📝 メモ</h1>
+      <div class="header-sub" id="headerSub">思考・仕事・メモ・KEYを整理</div>
+    </div>
+  </div>
+</div>
+
+<!-- ホーム -->
+<div class="page active" id="pageHome">
+  <div class="chips" id="catChips"></div>
+  <input type="text" class="search-box" id="searchBox" placeholder="🔍 タイトル・本文を検索" oninput="renderHome()">
+  <div id="folderFilterTag"></div>
+  <div id="noteList"></div>
+</div>
+
+<!-- フォルダ -->
+<div class="page" id="pageFolders">
+  <div class="card">
+    <div class="card-title">📁 新しいフォルダ</div>
+    <div class="new-folder-row">
+      <input type="text" id="newFolderName" placeholder="フォルダ名を入力">
+      <button class="btn btn-primary" style="width:auto" onclick="addFolder()">＋追加</button>
+    </div>
+  </div>
+  <div id="folderList"></div>
+</div>
+
+<!-- 編集/新規作成 -->
+<div class="page" id="pageEditor">
+  <div class="editor-header">
+    <button class="back-btn" onclick="closeEditor()">← 戻る</button>
+    <button class="back-btn" id="deleteNoteBtn" style="color:#dc2626;display:none" onclick="deleteCurrentNote()">🗑 削除</button>
+  </div>
+  <div class="card">
+    <div class="form-group">
+      <label>カテゴリー</label>
+      <div class="cat-select" id="catSelect"></div>
+    </div>
+    <div class="form-group">
+      <label>フォルダ</label>
+      <select id="editFolder" onchange="handleFolderSelect()"></select>
+    </div>
+    <div class="form-group">
+      <label>タイトル</label>
+      <input type="text" id="editTitle" placeholder="タイトル（省略可）">
+    </div>
+    <div class="form-group">
+      <label>本文</label>
+      <textarea id="editBody" placeholder="内容を入力..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>画像添付</label>
+      <div class="photo-area" onclick="document.getElementById('photoInput').click()">📷 タップして画像を追加</div>
+      <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(event)">
+      <div class="photo-grid" id="photoPreview"></div>
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="saveNote()">💾 保存する</button>
+</div>
+
+<!-- 設定 -->
+<div class="page" id="pageSettings">
+  <div class="card">
+    <div class="card-title">💾 ストレージ使用量</div>
+    <div class="storage-bar"><div class="storage-fill" id="storageFill"></div></div>
+    <div class="storage-text" id="storageText"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📦 データ管理</div>
+    <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:6px">📤 エクスポート</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('importInput').click()" style="margin-bottom:6px">📥 インポート</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="btn btn-danger" onclick="clearAllData()">🗑 全データ削除</button>
+  </div>
+</div>
+
+<!-- 画像モーダル -->
+<div class="modal" id="imgModal" onclick="this.classList.remove('active')">
+  <img id="imgModalSrc">
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fabBtn" onclick="openEditor()">＋</button>
+
+<!-- ナビ -->
+<div class="nav">
+  <div class="nav-item active" onclick="showPage('pageHome')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>ホーム
+  </div>
+  <div class="nav-item" onclick="showPage('pageFolders')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>フォルダ
+  </div>
+  <div class="nav-item" onclick="showPage('pageSettings')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>設定
+  </div>
+</div>
+
+<script>
+const SK = 'memoAppData';
+const categories = [
+  {id:'thought', name:'思考', color:'#7c3aed', bg:'#f5f3ff', icon:'💭'},
+  {id:'work',    name:'仕事', color:'#2563eb', bg:'#eff6ff', icon:'💼'},
+  {id:'memo',    name:'メモ', color:'#d97706', bg:'#fffbeb', icon:'📝'},
+  {id:'key',     name:'KEY', color:'#dc2626', bg:'#fef2f2', icon:'🔑'},
+];
+function catInfo(id){return categories.find(c=>c.id===id)||categories[2]}
+
+function load(){const d=localStorage.getItem(SK);return d?JSON.parse(d):{notes:[],folders:[]}}
+function save(d){
+  try{
+    localStorage.setItem(SK,JSON.stringify(d));
+    return true;
+  }catch(e){
+    alert('保存に失敗しました。画像サイズが大きすぎるか、ストレージの空き容量が不足しています。');
+    return false;
+  }
+}
+
+let state = {
+  categoryFilter: 'all',
+  folderFilter: null,
+  editingId: null,
+  tempImages: []
+};
+
+// --- ページ切り替え ---
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const navMap = {pageHome:0, pageFolders:1, pageSettings:2};
+  document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active', navMap[id]===i));
+  document.getElementById('fabBtn').style.display = (id==='pageHome') ? 'flex' : 'none';
+  document.querySelector('.nav').style.display = (id==='pageEditor') ? 'none' : 'flex';
+  if(id==='pageHome')renderHome();
+  if(id==='pageFolders')renderFolders();
+  if(id==='pageSettings')renderSettings();
+}
+
+// --- ホーム ---
+function renderCatChips(){
+  const chips = document.getElementById('catChips');
+  let html = `<div class="chip ${state.categoryFilter==='all'?'active':''}" style="${state.categoryFilter==='all'?'background:#4f46e5':''}" onclick="setCatFilter('all')">すべて</div>`;
+  categories.forEach(c=>{
+    const active = state.categoryFilter===c.id;
+    html += `<div class="chip ${active?'active':''}" style="${active?'background:'+c.color:''}" onclick="setCatFilter('${c.id}')">${c.icon} ${c.name}</div>`;
+  });
+  chips.innerHTML = html;
+}
+function setCatFilter(id){state.categoryFilter=id;renderHome()}
+
+function renderHome(){
+  renderCatChips();
+  const data = load();
+  const tagEl = document.getElementById('folderFilterTag');
+  if(state.folderFilter){
+    tagEl.innerHTML = `<div class="filter-tag">📁 ${escapeHtml(state.folderFilter)} <span onclick="clearFolderFilter()">✕</span></div>`;
+  } else {
+    tagEl.innerHTML = '';
+  }
+
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  let notes = data.notes.slice().sort((a,b)=>b.updatedAt-a.updatedAt);
+  if(state.categoryFilter!=='all') notes = notes.filter(n=>n.category===state.categoryFilter);
+  if(state.folderFilter) notes = notes.filter(n=>n.folder===state.folderFilter);
+  if(q) notes = notes.filter(n=>(n.title||'').toLowerCase().includes(q) || (n.body||'').toLowerCase().includes(q));
+
+  const list = document.getElementById('noteList');
+  if(notes.length===0){
+    list.innerHTML = '<div class="empty">メモがありません。右下の＋から追加しましょう</div>';
+    return;
+  }
+  list.innerHTML = notes.map(n=>{
+    const c = catInfo(n.category);
+    const thumb = n.images && n.images.length>0 ? `<img class="note-thumb" src="${n.images[0]}">` : '';
+    const date = new Date(n.updatedAt);
+    const dateStr = `${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+    return `<div class="note-card" style="border-left-color:${c.color}" onclick="openEditor(${n.id})">
+      <div class="note-main">
+        <div class="note-badges">
+          <span class="badge" style="background:${c.bg};color:${c.color}">${c.icon} ${c.name}</span>
+          ${n.folder?`<span class="badge" style="background:#f1f5f9;color:#64748b">📁 ${escapeHtml(n.folder)}</span>`:''}
+        </div>
+        <div class="note-title">${escapeHtml(n.title) || '(無題)'}</div>
+        <div class="note-body">${escapeHtml(n.body||'')}</div>
+        <div class="note-meta">
+          <span>${dateStr}</span>
+          ${n.images && n.images.length>0 ? `<span>📷 ${n.images.length}</span>` : ''}
+        </div>
+      </div>
+      ${thumb}
+    </div>`;
+  }).join('');
+}
+
+function clearFolderFilter(){state.folderFilter=null;renderHome()}
+
+// --- フォルダ ---
+function renderFolders(){
+  const data = load();
+  const list = document.getElementById('folderList');
+  if(data.folders.length===0){
+    list.innerHTML = '<div class="empty">フォルダがありません</div>';
+    return;
+  }
+  list.innerHTML = data.folders.map(f=>{
+    const count = data.notes.filter(n=>n.folder===f).length;
+    return `<div class="folder-card">
+      <div onclick="openFolder('${escapeAttr(f)}')" style="flex:1">
+        <div class="folder-name">📁 ${escapeHtml(f)}</div>
+        <div class="folder-count">${count}件のメモ</div>
+      </div>
+      <button class="folder-del" onclick="deleteFolder('${escapeAttr(f)}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function openFolder(name){
+  state.folderFilter = name;
+  state.categoryFilter = 'all';
+  showPage('pageHome');
+}
+
+function addFolder(){
+  const input = document.getElementById('newFolderName');
+  const name = input.value.trim();
+  if(!name)return;
+  const data = load();
+  if(data.folders.includes(name)){alert('同じ名前のフォルダが既にあります');return}
+  data.folders.push(name);
+  save(data);
+  input.value='';
+  renderFolders();
+}
+
+function deleteFolder(name){
+  if(!confirm(`フォルダ「${name}」を削除しますか？\n中のメモは「フォルダなし」になります`))return;
+  const data = load();
+  data.folders = data.folders.filter(f=>f!==name);
+  data.notes.forEach(n=>{if(n.folder===name)n.folder=null});
+  save(data);
+  if(state.folderFilter===name)state.folderFilter=null;
+  renderFolders();
+}
+
+// --- 編集 ---
+function renderCatSelectUI(selected){
+  const el = document.getElementById('catSelect');
+  el.innerHTML = categories.map(c=>{
+    const active = selected===c.id;
+    return `<div class="cat-btn ${active?'active':''}" style="color:${c.color};${active?'background:'+c.bg:''}" onclick="selectCategory('${c.id}')">
+      <span class="icon">${c.icon}</span>${c.name}
+    </div>`;
+  }).join('');
+}
+function selectCategory(id){
+  state.editingCategory = id;
+  renderCatSelectUI(id);
+}
+
+function populateFolderSelect(selected){
+  const data = load();
+  const sel = document.getElementById('editFolder');
+  let html = '<option value="">（フォルダなし）</option>';
+  data.folders.forEach(f=>{
+    html += `<option value="${escapeAttr(f)}" ${selected===f?'selected':''}>${escapeHtml(f)}</option>`;
+  });
+  html += '<option value="__new__">＋ 新しいフォルダを作成</option>';
+  sel.innerHTML = html;
+  if(selected)sel.value = selected;
+}
+
+function handleFolderSelect(){
+  const sel = document.getElementById('editFolder');
+  if(sel.value==='__new__'){
+    const name = prompt('新しいフォルダ名を入力してください');
+    if(name && name.trim()){
+      const data = load();
+      const trimmed = name.trim();
+      if(!data.folders.includes(trimmed)){
+        data.folders.push(trimmed);
+        save(data);
+      }
+      populateFolderSelect(trimmed);
+    } else {
+      sel.value='';
+    }
+  }
+}
+
+function openEditor(id){
+  state.editingId = id || null;
+  state.tempImages = [];
+  let note = null;
+  if(id){
+    const data = load();
+    note = data.notes.find(n=>n.id===id);
+  }
+  const defaultCat = note ? note.category : (state.categoryFilter!=='all' ? state.categoryFilter : 'memo');
+  state.editingCategory = defaultCat;
+  renderCatSelectUI(defaultCat);
+  populateFolderSelect(note ? note.folder : state.folderFilter);
+  document.getElementById('editTitle').value = note ? (note.title||'') : '';
+  document.getElementById('editBody').value = note ? (note.body||'') : '';
+  state.tempImages = note && note.images ? [...note.images] : [];
+  renderPhotoPreview();
+  document.getElementById('deleteNoteBtn').style.display = note ? 'block' : 'none';
+  showPage('pageEditor');
+}
+
+function closeEditor(){
+  showPage('pageHome');
+}
+
+function handlePhotos(e){
+  const files = Array.from(e.target.files);
+  files.forEach(f=>{
+    compressImage(f).then(dataUrl=>{
+      state.tempImages.push(dataUrl);
+      renderPhotoPreview();
+    });
+  });
+  e.target.value='';
+}
+
+function compressImage(file, maxDim=1280, quality=0.75){
+  return new Promise((resolve)=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w>maxDim || h>maxDim){
+          if(w>h){h=Math.round(h*maxDim/w);w=maxDim}
+          else{w=Math.round(w*maxDim/h);h=maxDim}
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = ()=>resolve(ev.target.result);
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoPreview(){
+  document.getElementById('photoPreview').innerHTML = state.tempImages.map((img,i)=>`
+    <div class="photo-item">
+      <img src="${img}" onclick="viewImage('${i}')">
+      <div class="rm" onclick="removeTempImage(event,${i})">✕</div>
+    </div>
+  `).join('');
+}
+function removeTempImage(e,i){
+  e.stopPropagation();
+  state.tempImages.splice(i,1);
+  renderPhotoPreview();
+}
+function viewImage(i){
+  document.getElementById('imgModalSrc').src = state.tempImages[i];
+  document.getElementById('imgModal').classList.add('active');
+}
+
+function saveNote(){
+  const title = document.getElementById('editTitle').value.trim();
+  const body = document.getElementById('editBody').value.trim();
+  if(!title && !body && state.tempImages.length===0){
+    alert('タイトル・本文・画像のいずれかを入力してください');
+    return;
+  }
+  const folderSel = document.getElementById('editFolder').value;
+  const folder = folderSel && folderSel!=='__new__' ? folderSel : null;
+
+  const data = load();
+  const now = Date.now();
+  if(state.editingId){
+    const note = data.notes.find(n=>n.id===state.editingId);
+    note.category = state.editingCategory;
+    note.folder = folder;
+    note.title = title;
+    note.body = body;
+    note.images = [...state.tempImages];
+    note.updatedAt = now;
+  } else {
+    data.notes.push({
+      id: now,
+      category: state.editingCategory,
+      folder: folder,
+      title, body,
+      images: [...state.tempImages],
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  if(save(data)){
+    showPage('pageHome');
+  }
+}
+
+function deleteCurrentNote(){
+  if(!state.editingId)return;
+  if(!confirm('このメモを削除しますか？'))return;
+  const data = load();
+  data.notes = data.notes.filter(n=>n.id!==state.editingId);
+  save(data);
+  showPage('pageHome');
+}
+
+// --- 設定 ---
+function renderSettings(){
+  const raw = localStorage.getItem(SK) || '';
+  const bytes = new Blob([raw]).size;
+  const mb = bytes/1024/1024;
+  const limitMb = 5; // localStorageのおおよその上限目安
+  const pct = Math.min(100, (mb/limitMb)*100);
+  document.getElementById('storageFill').style.width = pct+'%';
+  document.getElementById('storageFill').style.background = pct>85 ? '#dc2626' : (pct>60 ? '#d97706' : '#4f46e5');
+  document.getElementById('storageText').textContent = `約 ${mb.toFixed(2)}MB 使用中（目安上限 ${limitMb}MB）`;
+}
+
+function exportData(){
+  const d = load();
+  const blob = new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'メモデータ_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+}
+
+function importData(e){
+  const f = e.target.files[0]; if(!f)return;
+  const r = new FileReader();
+  r.onload = ev=>{
+    try{
+      const d = JSON.parse(ev.target.result);
+      if(Array.isArray(d.notes) && Array.isArray(d.folders)){
+        if(confirm('現在のデータを上書きしてインポートしますか？')){
+          save(d);
+          alert('インポート完了');
+          showPage('pageHome');
+        }
+      } else {
+        alert('無効なデータです');
+      }
+    }catch{alert('読み込みに失敗しました')}
+  };
+  r.readAsText(f);
+  e.target.value='';
+}
+
+function clearAllData(){
+  if(!confirm('全データを削除しますか？'))return;
+  if(!confirm('本当に削除しますか？この操作は取り消せません'))return;
+  localStorage.removeItem(SK);
+  alert('削除しました');
+  showPage('pageHome');
+}
+
+// --- ユーティリティ ---
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function escapeAttr(s){return escapeHtml(s).replace(/`/g,'&#96;')}
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+renderHome();
+</script>
+</body>
+</html>
