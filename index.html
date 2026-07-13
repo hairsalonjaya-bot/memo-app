@@ -94,6 +94,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
 .storage-bar{height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;margin-top:8px}
 .storage-fill{height:100%;background:#4f46e5;transition:width .3s}
 .storage-text{font-size:11px;color:#64748b;margin-top:6px}
+
+.detail-badges{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.detail-title{font-size:19px;font-weight:700;margin-bottom:12px;line-height:1.4}
+.detail-body{font-size:15px;line-height:1.8;color:#1f2333;white-space:pre-wrap;word-break:break-word;margin-bottom:14px}
+.detail-meta{font-size:11px;color:#94a3b8;margin-top:6px}
+.detail-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 14px}
+.detail-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -125,6 +132,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
     </div>
   </div>
   <div id="folderList"></div>
+</div>
+
+<!-- 詳細表示 -->
+<div class="page" id="pageDetail">
+  <div class="editor-header">
+    <button class="back-btn" onclick="showPage('pageHome')">← 戻る</button>
+    <button class="back-btn" onclick="editFromDetail()">✏️ 編集</button>
+  </div>
+  <div class="card" id="detailContent"></div>
+  <button class="btn btn-danger" onclick="deleteFromDetail()" style="margin-top:4px">🗑 削除</button>
 </div>
 
 <!-- 編集/新規作成 -->
@@ -222,7 +239,9 @@ let state = {
   categoryFilter: 'all',
   folderFilter: null,
   editingId: null,
-  tempImages: []
+  tempImages: [],
+  detailId: null,
+  detailImages: []
 };
 
 // --- ページ切り替え ---
@@ -232,7 +251,7 @@ function showPage(id){
   const navMap = {pageHome:0, pageFolders:1, pageSettings:2};
   document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active', navMap[id]===i));
   document.getElementById('fabBtn').style.display = (id==='pageHome') ? 'flex' : 'none';
-  document.querySelector('.nav').style.display = (id==='pageEditor') ? 'none' : 'flex';
+  document.querySelector('.nav').style.display = (id==='pageEditor'||id==='pageDetail') ? 'none' : 'flex';
   if(id==='pageHome')renderHome();
   if(id==='pageFolders')renderFolders();
   if(id==='pageSettings')renderSettings();
@@ -276,7 +295,7 @@ function renderHome(){
     const thumb = n.images && n.images.length>0 ? `<img class="note-thumb" src="${n.images[0]}">` : '';
     const date = new Date(n.updatedAt);
     const dateStr = `${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
-    return `<div class="note-card" style="border-left-color:${c.color}" onclick="openEditor(${n.id})">
+    return `<div class="note-card" style="border-left-color:${c.color}" onclick="openDetail(${n.id})">
       <div class="note-main">
         <div class="note-badges">
           <span class="badge" style="background:${c.bg};color:${c.color}">${c.icon} ${c.name}</span>
@@ -342,6 +361,50 @@ function deleteFolder(name){
   save(data);
   if(state.folderFilter===name)state.folderFilter=null;
   renderFolders();
+}
+
+// --- 詳細表示 ---
+function openDetail(id){
+  const data = load();
+  const n = data.notes.find(x=>x.id===id);
+  if(!n){showPage('pageHome');return}
+  state.detailId = id;
+  state.detailImages = n.images || [];
+  const c = catInfo(n.category);
+  const date = new Date(n.updatedAt);
+  const dateStr = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')} 更新`;
+
+  let html = `<div class="detail-badges">
+    <span class="badge" style="background:${c.bg};color:${c.color}">${c.icon} ${c.name}</span>
+    ${n.folder?`<span class="badge" style="background:#f1f5f9;color:#64748b">📁 ${escapeHtml(n.folder)}</span>`:''}
+  </div>`;
+  html += `<div class="detail-title">${escapeHtml(n.title) || '(無題)'}</div>`;
+  if(n.body) html += `<div class="detail-body">${escapeHtml(n.body)}</div>`;
+  if(n.images && n.images.length>0){
+    html += `<div class="detail-photos">${n.images.map((img,i)=>`<img src="${img}" onclick="viewDetailImage(${i})">`).join('')}</div>`;
+  }
+  html += `<div class="detail-meta">${dateStr}</div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+  showPage('pageDetail');
+}
+
+function viewDetailImage(i){
+  document.getElementById('imgModalSrc').src = state.detailImages[i];
+  document.getElementById('imgModal').classList.add('active');
+}
+
+function editFromDetail(){
+  openEditor(state.detailId);
+}
+
+function deleteFromDetail(){
+  if(!state.detailId)return;
+  if(!confirm('このメモを削除しますか？'))return;
+  const data = load();
+  data.notes = data.notes.filter(n=>n.id!==state.detailId);
+  save(data);
+  showPage('pageHome');
 }
 
 // --- 編集 ---
