@@ -60,7 +60,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
 
 .form-group{margin-bottom:12px}
 .form-group label{display:block;font-size:11px;color:#64748b;margin-bottom:4px;font-weight:600}
-.form-group input[type=text],.form-group textarea,.form-group select{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:#fff;font-family:inherit}
+.form-group input[type=text],.form-group input[type=date],.form-group input[type=time],.form-group textarea,.form-group select{width:100%;padding:10px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:#fff;font-family:inherit}
 .form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
 .form-group textarea{resize:vertical;min-height:120px;line-height:1.5}
 
@@ -101,6 +101,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
 .detail-meta{font-size:11px;color:#94a3b8;margin-top:6px}
 .detail-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 14px}
 .detail-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer}
+
+.task-check{width:24px;height:24px;border-radius:50%;border:2px solid #cbd5e1;flex-shrink:0;margin-top:2px;cursor:pointer;background:#fff}
+.task-check:active{transform:scale(.85);background:#e2e8f0}
 </style>
 </head>
 <body>
@@ -108,10 +111,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
 <div class="header">
   <div class="header-row">
     <div>
-      <h1>📝 メモ</h1>
+      <h1 id="headerTitle">📝 メモ</h1>
       <div class="header-sub" id="headerSub">思考・仕事・メモ・KEYを整理</div>
     </div>
   </div>
+</div>
+
+<!-- タスク -->
+<div class="page" id="pageTasks">
+  <div id="taskList"></div>
+</div>
+
+<!-- タスク詳細 -->
+<div class="page" id="pageTaskDetail">
+  <div class="editor-header">
+    <button class="back-btn" onclick="showPage('pageTasks')">← 戻る</button>
+    <button class="back-btn" onclick="editFromTaskDetail()">✏️ 編集</button>
+  </div>
+  <div class="card" id="taskDetailContent"></div>
+  <button class="btn btn-danger" onclick="deleteFromTaskDetail()" style="margin-top:4px">🗑 削除</button>
+</div>
+
+<!-- タスク編集/新規作成 -->
+<div class="page" id="pageTaskEditor">
+  <div class="editor-header">
+    <button class="back-btn" onclick="closeTaskEditor()">← 戻る</button>
+    <button class="back-btn" id="deleteTaskBtn" style="color:#dc2626;display:none" onclick="deleteCurrentTask()">🗑 削除</button>
+  </div>
+  <div class="card">
+    <div class="form-group">
+      <label>タイトル</label>
+      <input type="text" id="taskTitle" placeholder="タスク名">
+    </div>
+    <div class="form-group">
+      <label>期限日</label>
+      <input type="date" id="taskDueDate">
+    </div>
+    <div class="form-group">
+      <label>時刻（任意）</label>
+      <input type="time" id="taskDueTime">
+    </div>
+    <div class="form-group">
+      <label>メモ</label>
+      <textarea id="taskBody" placeholder="詳細（省略可）"></textarea>
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="saveTask()">💾 保存する</button>
 </div>
 
 <!-- ホーム -->
@@ -199,12 +244,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
 </div>
 
 <!-- FAB -->
-<button class="fab" id="fabBtn" onclick="openEditor()">＋</button>
+<button class="fab" id="fabBtn" onclick="fabDispatch()">＋</button>
 
 <!-- ナビ -->
 <div class="nav">
+  <div class="nav-item" onclick="showPage('pageTasks')">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>タスク
+  </div>
   <div class="nav-item active" onclick="showPage('pageHome')">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>ホーム
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>メモ
   </div>
   <div class="nav-item" onclick="showPage('pageFolders')">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>フォルダ
@@ -224,7 +272,15 @@ const categories = [
 ];
 function catInfo(id){return categories.find(c=>c.id===id)||categories[2]}
 
-function load(){const d=localStorage.getItem(SK);return d?JSON.parse(d):{notes:[],folders:[]}}
+function load(){
+  const d = localStorage.getItem(SK);
+  const parsed = d ? JSON.parse(d) : {};
+  return {
+    notes: Array.isArray(parsed.notes) ? parsed.notes : [],
+    folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+    tasks: Array.isArray(parsed.tasks) ? parsed.tasks : []
+  };
+}
 function save(d){
   try{
     localStorage.setItem(SK,JSON.stringify(d));
@@ -236,25 +292,52 @@ function save(d){
 }
 
 let state = {
+  currentPage: 'pageHome',
   categoryFilter: 'all',
   folderFilter: null,
   editingId: null,
   tempImages: [],
   detailId: null,
-  detailImages: []
+  detailImages: [],
+  taskDetailId: null,
+  editingTaskId: null
+};
+
+const headerMap = {
+  pageTasks:      {icon:'✅', title:'タスク',     sub:'期限が近い順に表示'},
+  pageHome:       {icon:'📝', title:'メモ',       sub:'思考・仕事・メモ・KEYを整理'},
+  pageFolders:    {icon:'📁', title:'フォルダ',   sub:'メモをフォルダで整理'},
+  pageSettings:   {icon:'⚙️', title:'設定',       sub:'データのバックアップ・削除'},
+  pageDetail:     {icon:'📝', title:'メモ詳細',   sub:''},
+  pageTaskDetail: {icon:'✅', title:'タスク詳細', sub:''},
+  pageEditor:     {icon:'📝', title:'メモ編集',   sub:''},
+  pageTaskEditor: {icon:'✅', title:'タスク編集', sub:''}
 };
 
 // --- ページ切り替え ---
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  const navMap = {pageHome:0, pageFolders:1, pageSettings:2};
+  state.currentPage = id;
+  const navMap = {pageTasks:0, pageHome:1, pageFolders:2, pageSettings:3};
   document.querySelectorAll('.nav-item').forEach((n,i)=>n.classList.toggle('active', navMap[id]===i));
-  document.getElementById('fabBtn').style.display = (id==='pageHome') ? 'flex' : 'none';
-  document.querySelector('.nav').style.display = (id==='pageEditor'||id==='pageDetail') ? 'none' : 'flex';
+  document.getElementById('fabBtn').style.display = (id==='pageHome'||id==='pageTasks') ? 'flex' : 'none';
+  document.querySelector('.nav').style.display =
+    ['pageEditor','pageDetail','pageTaskEditor','pageTaskDetail'].includes(id) ? 'none' : 'flex';
+  const h = headerMap[id];
+  if(h){
+    document.getElementById('headerTitle').textContent = `${h.icon} ${h.title}`;
+    document.getElementById('headerSub').textContent = h.sub;
+  }
   if(id==='pageHome')renderHome();
+  if(id==='pageTasks')renderTasks();
   if(id==='pageFolders')renderFolders();
   if(id==='pageSettings')renderSettings();
+}
+
+function fabDispatch(){
+  if(state.currentPage==='pageTasks') openTaskEditor();
+  else openEditor();
 }
 
 // --- ホーム ---
@@ -573,6 +656,170 @@ function deleteCurrentNote(){
   showPage('pageHome');
 }
 
+// --- タスク ---
+const urgencyStyle = {
+  overdue:  {bg:'#fef2f2', color:'#dc2626', icon:'⚠'},
+  today:    {bg:'#fffbeb', color:'#d97706', icon:'🔶'},
+  upcoming: {bg:'#eff6ff', color:'#2563eb', icon:'📅'},
+  none:     {bg:'#f8fafc', color:'#94a3b8', icon:'🗓'}
+};
+
+function taskUrgency(t){
+  if(!t.dueDate) return 'none';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(t.dueDate+'T00:00:00');
+  if(due < today) return 'overdue';
+  if(due.getTime() === today.getTime()) return 'today';
+  return 'upcoming';
+}
+
+function formatDueBadge(t){
+  const level = taskUrgency(t);
+  const s = urgencyStyle[level];
+  if(!t.dueDate) return {level, ...s, text:'期限なし'};
+  const [y,m,d] = t.dueDate.split('-').map(Number);
+  const weekday = ['日','月','火','水','木','金','土'][new Date(y,m-1,d).getDay()];
+  const timeStr = t.dueTime ? ` ${t.dueTime}` : '';
+  let text;
+  if(level==='overdue') text = `${m}/${d}(${weekday})${timeStr} 期限切れ`;
+  else if(level==='today') text = `本日${timeStr}が期限`;
+  else text = `${m}/${d}(${weekday})${timeStr}`;
+  return {level, ...s, text};
+}
+
+function taskSortKey(t){
+  if(!t.dueDate) return Infinity;
+  const time = t.dueTime || '23:59';
+  return new Date(`${t.dueDate}T${time}`).getTime();
+}
+
+function sortTasks(tasks){
+  return tasks.slice().sort((a,b)=>{
+    const ka = taskSortKey(a), kb = taskSortKey(b);
+    if(ka!==kb) return ka-kb;
+    return b.createdAt - a.createdAt;
+  });
+}
+
+function renderTasks(){
+  const data = load();
+  const list = document.getElementById('taskList');
+  const tasks = sortTasks(data.tasks);
+  if(tasks.length===0){
+    list.innerHTML = '<div class="empty">タスクがありません。右下の＋から追加しましょう</div>';
+    return;
+  }
+  list.innerHTML = tasks.map(t=>{
+    const b = formatDueBadge(t);
+    return `<div class="note-card" style="border-left-color:${b.color}">
+      <div class="task-check" onclick="completeTask(event,${t.id})"></div>
+      <div class="note-main" onclick="openTaskDetail(${t.id})">
+        <div class="note-title">${escapeHtml(t.title) || '(無題タスク)'}</div>
+        ${t.body ? `<div class="note-body">${escapeHtml(t.body)}</div>` : ''}
+        <div class="note-badges" style="margin-top:6px">
+          <span class="badge" style="background:${b.bg};color:${b.color}">${b.icon} ${b.text}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function completeTask(e, id){
+  e.stopPropagation();
+  const data = load();
+  data.tasks = data.tasks.filter(t=>t.id!==id);
+  save(data);
+  renderTasks();
+}
+
+function openTaskDetail(id){
+  const data = load();
+  const t = data.tasks.find(x=>x.id===id);
+  if(!t){showPage('pageTasks');return}
+  state.taskDetailId = id;
+  const b = formatDueBadge(t);
+  let html = `<div class="detail-badges"><span class="badge" style="background:${b.bg};color:${b.color}">${b.icon} ${b.text}</span></div>`;
+  html += `<div class="detail-title">${escapeHtml(t.title) || '(無題タスク)'}</div>`;
+  if(t.body) html += `<div class="detail-body">${escapeHtml(t.body)}</div>`;
+  const created = new Date(t.createdAt);
+  html += `<div class="detail-meta">作成: ${created.getFullYear()}/${created.getMonth()+1}/${created.getDate()}</div>`;
+  document.getElementById('taskDetailContent').innerHTML = html;
+  showPage('pageTaskDetail');
+}
+
+function editFromTaskDetail(){
+  openTaskEditor(state.taskDetailId);
+}
+
+function deleteFromTaskDetail(){
+  if(!state.taskDetailId)return;
+  if(!confirm('このタスクを削除しますか？'))return;
+  const data = load();
+  data.tasks = data.tasks.filter(t=>t.id!==state.taskDetailId);
+  save(data);
+  showPage('pageTasks');
+}
+
+function openTaskEditor(id){
+  state.editingTaskId = id || null;
+  let task = null;
+  if(id){
+    const data = load();
+    task = data.tasks.find(t=>t.id===id);
+  }
+  document.getElementById('taskTitle').value = task ? (task.title||'') : '';
+  document.getElementById('taskDueDate').value = task ? (task.dueDate||'') : '';
+  document.getElementById('taskDueTime').value = task ? (task.dueTime||'') : '';
+  document.getElementById('taskBody').value = task ? (task.body||'') : '';
+  document.getElementById('deleteTaskBtn').style.display = task ? 'block' : 'none';
+  showPage('pageTaskEditor');
+}
+
+function closeTaskEditor(){
+  showPage('pageTasks');
+}
+
+function saveTask(){
+  const title = document.getElementById('taskTitle').value.trim();
+  const body = document.getElementById('taskBody').value.trim();
+  const dueDate = document.getElementById('taskDueDate').value || null;
+  let dueTime = document.getElementById('taskDueTime').value || null;
+  if(!dueDate) dueTime = null;
+  if(!title && !body){
+    alert('タイトルか内容を入力してください');
+    return;
+  }
+  const data = load();
+  const now = Date.now();
+  if(state.editingTaskId){
+    const task = data.tasks.find(t=>t.id===state.editingTaskId);
+    task.title = title;
+    task.body = body;
+    task.dueDate = dueDate;
+    task.dueTime = dueTime;
+    task.updatedAt = now;
+  } else {
+    data.tasks.push({
+      id: now,
+      title, body, dueDate, dueTime,
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  if(save(data)){
+    showPage('pageTasks');
+  }
+}
+
+function deleteCurrentTask(){
+  if(!state.editingTaskId)return;
+  if(!confirm('このタスクを削除しますか？'))return;
+  const data = load();
+  data.tasks = data.tasks.filter(t=>t.id!==state.editingTaskId);
+  save(data);
+  showPage('pageTasks');
+}
+
 // --- 設定 ---
 function renderSettings(){
   const raw = localStorage.getItem(SK) || '';
@@ -601,6 +848,7 @@ function importData(e){
     try{
       const d = JSON.parse(ev.target.result);
       if(Array.isArray(d.notes) && Array.isArray(d.folders)){
+        if(!Array.isArray(d.tasks)) d.tasks = [];
         if(confirm('現在のデータを上書きしてインポートしますか？')){
           save(d);
           alert('インポート完了');
