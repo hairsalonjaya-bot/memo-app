@@ -230,7 +230,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
     <div class="storage-text" id="storageText"></div>
   </div>
   <div class="card">
-    <div class="card-title">📦 データ管理</div>
+    <div class="card-title">🔄 他の画面へデータを移行</div>
+    <p style="font-size:11px;color:#64748b;margin-bottom:8px">ファイル保存がうまくいかない場合はこちらをお使いください。移行元でコピー→移行先に貼り付けるだけです。</p>
+    <button class="btn btn-secondary" onclick="copyDataToClipboard()" style="margin-bottom:10px">📋 現在のデータをコピー</button>
+    <div class="form-group">
+      <label>↓ 移行先ではここに貼り付けてください</label>
+      <textarea id="pasteImportArea" placeholder="コピーしたデータをここに貼り付け（長押し→ペースト）" style="min-height:80px;font-size:11px"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="importFromPaste()">📥 貼り付けた内容をインポート</button>
+  </div>
+  <div class="card">
+    <div class="card-title">📦 ファイルでのデータ管理</div>
     <button class="btn btn-secondary" onclick="exportData()" style="margin-bottom:6px">📤 エクスポート</button>
     <button class="btn btn-secondary" onclick="document.getElementById('importInput').click()" style="margin-bottom:6px">📥 インポート</button>
     <input type="file" id="importInput" accept=".json" style="display:none" onchange="importData(event)">
@@ -830,6 +840,45 @@ function renderSettings(){
   document.getElementById('storageFill').style.width = pct+'%';
   document.getElementById('storageFill').style.background = pct>85 ? '#dc2626' : (pct>60 ? '#d97706' : '#4f46e5');
   document.getElementById('storageText').textContent = `約 ${mb.toFixed(2)}MB 使用中（目安上限 ${limitMb}MB）`;
+}
+
+function copyDataToClipboard(){
+  const text = JSON.stringify(load());
+  const done = () => alert('コピーしました！移行先の画面を開き、下の貼り付け欄に長押し→ペーストしてください。');
+  const fail = () => {
+    // クリップボードAPIが使えない場合は選択状態にしてユーザー自身にコピーしてもらう
+    const ta = document.getElementById('pasteImportArea');
+    ta.value = text;
+    ta.focus();
+    ta.select();
+    alert('自動コピーに失敗しました。貼り付け欄に内容を表示したので、全選択してコピーしてから移行先に貼り付けてください。');
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(fail);
+  } else {
+    fail();
+  }
+}
+
+function importFromPaste(){
+  const raw = document.getElementById('pasteImportArea').value.trim();
+  if(!raw){alert('貼り付け欄が空です');return}
+  try{
+    const d = JSON.parse(raw);
+    if(Array.isArray(d.notes) && Array.isArray(d.folders)){
+      if(!Array.isArray(d.tasks)) d.tasks = [];
+      if(confirm('現在のデータを上書きしてインポートしますか？')){
+        save(d);
+        document.getElementById('pasteImportArea').value = '';
+        alert('インポート完了');
+        showPage('pageHome');
+      }
+    } else {
+      alert('無効なデータです。コピーした内容が正しく貼り付けられているか確認してください。');
+    }
+  }catch(e){
+    alert('読み込みに失敗しました。貼り付けた内容が途中で切れていないか確認してください。');
+  }
 }
 
 function exportData(){
