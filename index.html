@@ -878,7 +878,7 @@ function syncTasksToGAS(showResult){
     headers:{'Content-Type':'text/plain'},
     body: JSON.stringify({action:'sync', tasks})
   }).then(res=>res.json()).then(result=>{
-    if(showResult) alert(result.message || '同期完了！');
+    if(showResult) alert(result.error ? 'エラー: '+result.error : (result.message || '同期完了！'));
   }).catch(e=>{
     if(showResult) alert('通信エラー: '+e.message);
   });
@@ -890,7 +890,7 @@ async function testNotify(){
   try{
     const res = await fetch(data.gasUrl, {method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({action:'test'})});
     const result = await res.json();
-    alert(result.message || 'テスト通知を送信しました');
+    alert(result.error ? 'エラー: '+result.error : (result.message || 'テスト通知を送信しました'));
   }catch(e){alert('通信エラー: '+e.message)}
 }
 
