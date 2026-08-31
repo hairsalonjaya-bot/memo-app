@@ -230,6 +230,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
     <div class="storage-text" id="storageText"></div>
   </div>
   <div class="card">
+    <div class="card-title">🔔 タスクのLINE通知</div>
+    <p style="font-size:11px;color:#64748b;margin-bottom:8px">期限の5日前・3日前にLINEでお知らせします。GAS（Google Apps Script）の設定が必要です。</p>
+    <div class="form-group">
+      <label>GAS WebアプリURL</label>
+      <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/..." oninput="saveGasUrl()">
+    </div>
+    <button class="btn btn-secondary" onclick="syncTasksToGAS(true)" style="margin-bottom:6px">🔄 タスクを今すぐ同期</button>
+    <button class="btn btn-secondary" onclick="testNotify()">🔔 テスト通知を送信</button>
+  </div>
+  <div class="card">
     <div class="card-title">🔄 他の画面へデータを移行</div>
     <p style="font-size:11px;color:#64748b;margin-bottom:8px">ファイル保存がうまくいかない場合はこちらをお使いください。移行元でコピー→移行先に貼り付けるだけです。</p>
     <button class="btn btn-secondary" onclick="copyDataToClipboard()" style="margin-bottom:10px">📋 現在のデータをコピー</button>
@@ -288,7 +298,8 @@ function load(){
   return {
     notes: Array.isArray(parsed.notes) ? parsed.notes : [],
     folders: Array.isArray(parsed.folders) ? parsed.folders : [],
-    tasks: Array.isArray(parsed.tasks) ? parsed.tasks : []
+    tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+    gasUrl: typeof parsed.gasUrl === 'string' ? parsed.gasUrl : ''
   };
 }
 function save(d){
@@ -740,6 +751,7 @@ function completeTask(e, id){
   data.tasks = data.tasks.filter(t=>t.id!==id);
   save(data);
   renderTasks();
+  syncTasksToGAS();
 }
 
 function openTaskDetail(id){
@@ -768,6 +780,7 @@ function deleteFromTaskDetail(){
   data.tasks = data.tasks.filter(t=>t.id!==state.taskDetailId);
   save(data);
   showPage('pageTasks');
+  syncTasksToGAS();
 }
 
 function openTaskEditor(id){
@@ -818,6 +831,7 @@ function saveTask(){
   }
   if(save(data)){
     showPage('pageTasks');
+    syncTasksToGAS();
   }
 }
 
@@ -828,6 +842,7 @@ function deleteCurrentTask(){
   data.tasks = data.tasks.filter(t=>t.id!==state.editingTaskId);
   save(data);
   showPage('pageTasks');
+  syncTasksToGAS();
 }
 
 // --- 設定 ---
@@ -840,6 +855,43 @@ function renderSettings(){
   document.getElementById('storageFill').style.width = pct+'%';
   document.getElementById('storageFill').style.background = pct>85 ? '#dc2626' : (pct>60 ? '#d97706' : '#4f46e5');
   document.getElementById('storageText').textContent = `約 ${mb.toFixed(2)}MB 使用中（目安上限 ${limitMb}MB）`;
+  document.getElementById('gasUrl').value = load().gasUrl || '';
+}
+
+function saveGasUrl(){
+  const d = load();
+  d.gasUrl = document.getElementById('gasUrl').value.trim();
+  save(d);
+}
+
+function syncTasksToGAS(showResult){
+  const data = load();
+  if(!data.gasUrl){
+    if(showResult) alert('GAS WebアプリURLを設定画面で入力してください');
+    return;
+  }
+  const tasks = data.tasks
+    .filter(t=>t.dueDate)
+    .map(t=>({title:t.title||'(無題タスク)', dueDate:t.dueDate, dueTime:t.dueTime||''}));
+  fetch(data.gasUrl, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify({action:'sync', tasks})
+  }).then(res=>res.json()).then(result=>{
+    if(showResult) alert(result.message || '同期完了！');
+  }).catch(e=>{
+    if(showResult) alert('通信エラー: '+e.message);
+  });
+}
+
+async function testNotify(){
+  const data = load();
+  if(!data.gasUrl){alert('GAS WebアプリURLを入力してください');return}
+  try{
+    const res = await fetch(data.gasUrl, {method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({action:'test'})});
+    const result = await res.json();
+    alert(result.message || 'テスト通知を送信しました');
+  }catch(e){alert('通信エラー: '+e.message)}
 }
 
 function copyDataToClipboard(){
