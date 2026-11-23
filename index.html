@@ -160,7 +160,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
 </div>
 
 <!-- ホーム -->
-<div class="page active" id="pageHome">
+<div class="page" id="pageHome">
   <div class="chips" id="catChips"></div>
   <input type="text" class="search-box" id="searchBox" placeholder="🔍 タイトル・本文を検索" oninput="renderHome()">
   <div id="folderFilterTag"></div>
@@ -314,7 +314,7 @@ function save(d){
 }
 
 let state = {
-  currentPage: 'pageHome',
+  currentPage: 'pageTasks',
   categoryFilter: 'all',
   folderFilter: null,
   editingId: null,
@@ -993,7 +993,7 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
-renderHome();
+showPage('pageTasks');
 </script>
 </body>
 </html>
