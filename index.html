@@ -231,13 +231,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-
   </div>
   <div class="card">
     <div class="card-title">🔔 タスクのLINE通知</div>
-    <p style="font-size:11px;color:#64748b;margin-bottom:8px">期限の5日前・3日前にLINEでお知らせします。GAS（Google Apps Script）の設定が必要です。</p>
+    <p style="font-size:11px;color:#64748b;margin-bottom:8px">期限の3日前・1日前の朝9時にLINEでお知らせします。GAS（Google Apps Script）の設定が必要です。</p>
     <div class="form-group">
       <label>GAS WebアプリURL</label>
       <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/..." oninput="saveGasUrl()">
     </div>
     <button class="btn btn-secondary" onclick="syncTasksToGAS(true)" style="margin-bottom:6px">🔄 タスクを今すぐ同期</button>
-    <button class="btn btn-secondary" onclick="testNotify()">🔔 テスト通知を送信</button>
+    <button class="btn btn-secondary" onclick="testNotify()" style="margin-bottom:6px">🔔 テスト通知を送信</button>
+    <button class="btn btn-secondary" onclick="checkNow()">⏰ 今日の期限通知を今すぐ確認</button>
   </div>
   <div class="card">
     <div class="card-title">🔄 他の画面へデータを移行</div>
@@ -891,6 +892,16 @@ async function testNotify(){
     const res = await fetch(data.gasUrl, {method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({action:'test'})});
     const result = await res.json();
     alert(result.error ? 'エラー: '+result.error : (result.message || 'テスト通知を送信しました'));
+  }catch(e){alert('通信エラー: '+e.message)}
+}
+
+async function checkNow(){
+  const data = load();
+  if(!data.gasUrl){alert('GAS WebアプリURLを入力してください');return}
+  try{
+    const res = await fetch(data.gasUrl, {method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({action:'check'})});
+    const result = await res.json();
+    alert(result.error ? 'エラー: '+result.error : (result.message || '確認しました'));
   }catch(e){alert('通信エラー: '+e.message)}
 }
 
